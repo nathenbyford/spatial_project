@@ -1,0 +1,83 @@
+---
+title: "Under reported Covid-19 count analysis"
+author: " "
+footer: "Nathen Byford"
+format: baylor-revealjs
+view-distance: 5
+---
+
+```{r}
+#| include: false
+
+library(tidyverse); theme_set(theme_bw())
+library(sp)
+library(geoR)
+library(gstat)
+library(plotly)
+
+load("covid.RData")
+```
+
+## Covid Count Data
+
+Some information about covid data and why it matters.
+
+
+## Big Idea
+
+Covid-19 count data is likely under reported due to many reasons:
+
+- It can manifest in different severity levels,
+- Some people are apprehensive to get tested,
+- Some places don't have the ability to test everyone, and
+- etc.
+
+:::{.def} 
+Under reported data can bias the estimates to be lower than they really are, can be thought of as unintentional missing data.
+:::
+
+## EDA
+
+```{r}
+#| include: false
+US <- map_data("state")
+
+data <- dat
+
+dat <- dat |> 
+  mutate(State = str_to_lower(State))
+  
+pos_count <- dat |> select(State, positive, Pop) |> rename(region = State)
+
+map_counts <- left_join(US, pos_count)
+```
+
+```{r}
+
+data$hover <- with(data, paste(State, '<br>', "Total tests:", totalTestResults,"<br>",
+                           "Air polution:", AirPol, "<br>", 
+                           "Obesity:", Obesity, "<br>",
+                           "Uninsured:", Uninsured))
+# give state boundaries a white border
+l <- list(color = toRGB("white"), width = 2)
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white')
+)
+
+fig <- plot_geo(data, locationmode = 'USA-states')
+fig <- fig %>% add_trace(
+    z = ~positive, text = ~hover, locations = ~Abbre,
+    color = ~positive, colors = 'Blues', reversescale = TRUE
+  )
+fig <- fig %>% colorbar(title = "Cases")
+fig <- fig %>% layout(
+    title = 'Covid-19 counts by state<br>(Hover for breakdown)',
+    geo = g
+  )
+
+fig
+```
+

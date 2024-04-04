@@ -1,0 +1,2 @@
+name: FixPlotlySize
+script: ["fix-plotly-size.js"]
