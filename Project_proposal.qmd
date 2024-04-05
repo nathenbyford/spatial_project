@@ -7,7 +7,6 @@ date-format: long
 footer: "Nathen Byford"
 format: baylor-revealjs
 bibliography: research.bib
-biblio-style: Chicago
 view-distance: 5
 ---
 
@@ -15,12 +14,30 @@ view-distance: 5
 #| include: false
 
 library(tidyverse); theme_set(theme_bw())
+library(cowplot)
+library(gtsummary)
 library(sp)
 library(geoR)
 library(gstat)
 library(plotly)
 
 load("covid.RData")
+```
+
+```{r}
+#| include: false
+US <- map_data("state")
+
+data <- dat |>
+  mutate(pos_test_rate = positive / totalTestResults,
+         test_rate = totalTestResults / Pop)
+
+dat <- dat |> 
+  mutate(State = str_to_lower(State))
+  
+pos_count <- dat |> select(State, positive, Pop) |> rename(region = State)
+
+map_counts <- left_join(US, pos_count)
 ```
 
 ## Covid Count Data
@@ -41,28 +58,66 @@ Covid-19 count data is likely under reported due to many reasons:
 Under reported data can bias the estimates to be lower than they really are, can be thought of as unintentional missing data.
 :::
 
+## Data{.smaller}
+
+:::{.columns}
+::::{.column width=58%}
+- Covid-19 counts for Lower 48 & DC
+- 23 variables
+- Response: Positive cases (count)
+- Spatial Component: State (lattice)
+  
+Distribution of response
+```{r}
+data |> 
+  ggplot(aes(x = positive)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 100) +
+  geom_density() +
+  scale_x_continuous(labels = scales::comma) +
+  labs(title = "Density of positive cases",
+       x = "cases")
+```
+
+::::
+
+::::{.column width=38%}
+:::{.def}
+```{r}
+tbl_dat <- data |> 
+  select(positive, totalTestResults, test_rate, Popdensity, AirPol, Obesity, Smoking, Excessive_Drinking) |> 
+  rename(
+    "Positive tests" = positive,
+    "Total tests" = totalTestResults,
+    "Testing Rate" = test_rate,
+    "Air Pollution" = AirPol,
+    "Population Density" = Popdensity,
+    "Excessive Drinking" = Excessive_Drinking
+  )
+  
+tbl_dat |> 
+  tbl_summary() |> 
+  bold_labels() |> 
+  modify_caption("Summary statistics for variables")
+```
+
+:::{.small-font}
+Not exhaustive list of variables and summary statistics
+:::
+
+:::
+::::
+:::
+
 ## EDA
 
 ```{r}
-#| include: false
-US <- map_data("state")
 
-data <- dat
-
-dat <- dat |> 
-  mutate(State = str_to_lower(State))
-  
-pos_count <- dat |> select(State, positive, Pop) |> rename(region = State)
-
-map_counts <- left_join(US, pos_count)
-```
-
-```{r}
-
-data$hover <- with(data, paste(State, '<br>', "Total tests:", totalTestResults,"<br>",
-                           "Air polution:", AirPol, "<br>", 
-                           "Obesity:", Obesity, "<br>",
-                           "Uninsured:", Uninsured))
+data$hover <- with(data, paste0(State, '<br>', "Total tests: ", format(totalTestResults, big.mark = ","),"<br>",
+                           "Testing rate: ", round(totalTestResults / Pop, 4) * 100, "%", "<br>",
+                           "Positive percent: ", round(positive / totalTestResults, 4) * 100, "%", "<br>",
+                           "Air polution: ", AirPol, "<br>", 
+                           "Obesity: ", Obesity, "<br>",
+                           "Uninsured: ", Uninsured))
 # give state boundaries a white border
 l <- list(color = toRGB("white"), width = 2)
 g <- list(
@@ -86,6 +141,75 @@ fig <- fig %>% layout(
 fig
 ```
 
+## Covariates
+
+```{r}
+plot_data <- data |> 
+  select(
+    State,positive, totalTestResults, Pop,
+    Smoking, AirPol, Obesity, Uninsured
+  ) |> 
+  mutate(
+    test_rate = (totalTestResults / Pop) * 100,
+    positive_perc = positive / totalTestResults,
+    State = str_to_lower(State)
+  ) |> 
+  rename(region = State)
+
+plot_data <- left_join(US, plot_data)
+
+positive <- plot_data |> 
+  ggplot(aes(x = long,  y = lat, group = group)) +
+  geom_polygon(aes(fill = positive), color = "black") +
+  theme_void() +
+  scale_fill_distiller() +
+  labs(title = "Positive count", fill = "Count") +
+  theme(plot.title = element_text(hjust = .5))
+
+testing_rate <- plot_data |> 
+  ggplot(aes(x = long,  y = lat, group = group)) +
+  geom_polygon(aes(fill = test_rate), color = "black") +
+  theme_void() +
+  scale_fill_distiller(palette = 2) +
+  labs(title = "Testing rate", fill = "percent") +
+  theme(plot.title = element_text(hjust = .5))
+
+smoke <- plot_data |> 
+  ggplot(aes(x = long,  y = lat, group = group)) +
+  geom_polygon(aes(fill = Smoking), color = "black") +
+  theme_void() +
+  scale_fill_distiller(palette = 3) +
+  labs(title = "Smoking rate", fill = "percent") +
+  theme(plot.title = element_text(hjust = .5))
+
+obesity <- plot_data |> 
+  ggplot(aes(x = long,  y = lat, group = group)) +
+  geom_polygon(aes(fill = Obesity), color = "black") +
+  theme_void() +
+  scale_fill_distiller(palette = 7) +
+  labs(title = "Obesity rate", fill = "percent") +
+  theme(plot.title = element_text(hjust = .5))
+
+air_pol <- plot_data |> 
+  ggplot(aes(x = long,  y = lat, group = group)) +
+  geom_polygon(aes(fill = AirPol), color = "black") +
+  theme_void() +
+  scale_fill_distiller(palette = 8) +
+  labs(title = "Air polution index", fill = "value") +
+  theme(plot.title = element_text(hjust = .5))
+
+uninsured <- plot_data |> 
+  ggplot(aes(x = long,  y = lat, group = group)) +
+  geom_polygon(aes(fill = Uninsured), color = "black") +
+  theme_void() +
+  scale_fill_distiller(palette = "Spectral") +
+  labs(title = "Uninsured rate", fill = "percent") +
+  theme(plot.title = element_text(hjust = .5))
+
+plot_grid(positive, testing_rate, smoke,
+          obesity, air_pol, uninsured)
+```
+
 ## Methods
 
 - Non-spatial model
@@ -100,6 +224,23 @@ Model comparison methods
 - Watanabe-Akaike information criterion (WAIC)
 
 ## Non-spatial model (Naive)
+- Regression model ignoring spatial component
+- multivariate regression model
+- Model selection
+
+```{r}
+#| fig-align: center
+
+data |> 
+  select(positive, AirPol, Obesity, Drug_death, Excessive_Drinking,
+         Smoking, Uninsured, Popdensity, Pop) |> 
+  pivot_longer(-positive) |> 
+  ggplot(aes(x = value, y = positive)) +
+  geom_point() +
+  geom_smooth() +
+  facet_wrap(~name, scales = "free_x")
+```
+
 
 
 ## Spatial model (Kriging)
@@ -109,16 +250,20 @@ Model comparison methods
 
 - Idea comes from paper for correcting under reported TB counts in brazil [@stoner_hierarchical_2019]
 
-Model looks like
+
+## Hiearchical model
+
+let $z_s$ be the observed (under reported) counts, $y_t$ be the true unknown counts, $\pi_s$ be the under reporting rate, and $\lambda_s$ be the Poisson mean.
+
 
 :::{.def}
+The hierarchical model can be written as,
 \begin{align*}
-z_{t, s} | y_{t, s} \gamma_{t, s} &\sim \text{Binomial}(\pi_s, y_{t, s}) \\
-\log \left(\frac{\pi_s}{1 - \pi_s}\right) &= \beta_0 + g(u_s) + \gamma_{t, s} \\
-y_{t, s} | \varphi_s, \theta_s &\sim \text{Poisson}(\lambda_{t,s}) \\
-\log(\lambda_{t,s}) &= \log(P_{t, s}) + a_0 + f_1(x_s^{(1)}) + f_2(x_s^{(2)}) \\
-&\quad + f_3(x_s^{(3)}) + f_4(x_s^{(4)}) + \varphi_s + \theta_s
+z_{s} | y_{s} \sim \text{Binomial}(\pi_s, &y_{s}) \\
+&\downarrow \\
+&y_{s} \sim \text{Poisson}(\lambda_{s})
 \end{align*}
+where $\pi_s$ uses a logit link function and $\lambda_s$ uses a log link function to determine values for the parameters.
 :::
 
 ## References
