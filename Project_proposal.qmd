@@ -81,3 +81,15 @@ fig <- fig %>% layout(
 fig
 ```
 
+## Methods
+
+- Non-spatial model
+- Spatial models
+    - Kriging
+    - Something else
+- Under reported spatial hierarchical model
+
+## Model comparison
+
+- DIC
+- WAIC
