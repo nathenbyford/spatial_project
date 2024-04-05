@@ -1,8 +1,13 @@
 ---
-title: "Under reported Covid-19 count analysis"
+title: "Accounting for under reporting in Covid-19 case reporting"
+subtitle: "Using a Hiearchical framework"
 author: " "
+date: today
+date-format: long
 footer: "Nathen Byford"
 format: baylor-revealjs
+bibliography: research.bib
+biblio-style: Chicago
 view-distance: 5
 ---
 
@@ -89,7 +94,31 @@ fig
     - Something else
 - Under reported spatial hierarchical model
 
-## Model comparison
+Model comparison methods
 
-- DIC
-- WAIC
+- Deviance information criterion (DIC)
+- Watanabe-Akaike information criterion (WAIC)
+
+## Non-spatial model (Naive)
+
+
+## Spatial model (Kriging)
+
+
+## Under reporting hiearchical model
+
+- Idea comes from paper for correcting under reported TB counts in brazil [@stoner_hierarchical_2019]
+
+Model looks like
+
+:::{.def}
+\begin{align*}
+z_{t, s} | y_{t, s} \gamma_{t, s} &\sim \text{Binomial}(\pi_s, y_{t, s}) \\
+\log \left(\frac{\pi_s}{1 - \pi_s}\right) &= \beta_0 + g(u_s) + \gamma_{t, s} \\
+y_{t, s} | \varphi_s, \theta_s &\sim \text{Poisson}(\lambda_{t,s}) \\
+\log(\lambda_{t,s}) &= \log(P_{t, s}) + a_0 + f_1(x_s^{(1)}) + f_2(x_s^{(2)}) \\
+&\quad + f_3(x_s^{(3)}) + f_4(x_s^{(4)}) + \varphi_s + \theta_s
+\end{align*}
+:::
+
+## References
