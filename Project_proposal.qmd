@@ -42,11 +42,6 @@ map_counts <- left_join(US, pos_count)
 
 ## Covid Count Data
 
-Some information about covid data and why it matters.
-
-
-## Big Idea
-
 Covid-19 count data is likely under reported due to many reasons:
 
 - It can manifest in different severity levels,
@@ -62,7 +57,7 @@ Under reported data can bias the estimates to be lower than they really are, can
 
 :::{.columns}
 ::::{.column width=58%}
-- Covid-19 counts for Lower 48 & DC
+- Covid-19 counts for Lower 48 & DC from April 2020
 - 23 variables
 - Response: Positive cases (count)
 - Spatial Component: State (lattice)
@@ -123,8 +118,7 @@ l <- list(color = toRGB("white"), width = 2)
 g <- list(
   scope = 'usa',
   projection = list(type = 'albers usa'),
-  showlakes = TRUE,
-  lakecolor = toRGB('white')
+  showlakes = FALSE
 )
 
 fig <- plot_geo(data, locationmode = 'USA-states')
@@ -141,7 +135,7 @@ fig <- fig %>% layout(
 fig
 ```
 
-## Covariates
+## Variables
 
 ```{r}
 plot_data <- data |> 
@@ -168,10 +162,10 @@ positive <- plot_data |>
 
 testing_rate <- plot_data |> 
   ggplot(aes(x = long,  y = lat, group = group)) +
-  geom_polygon(aes(fill = test_rate), color = "black") +
+  geom_polygon(aes(fill = test_rate*100000), color = "black") +
   theme_void() +
-  scale_fill_distiller(palette = 2) +
-  labs(title = "Testing rate", fill = "percent") +
+  scale_fill_distiller(palette = 2, labels = scales::comma) +
+  labs(title = "Tests per 100k", fill = "count") +
   theme(plot.title = element_text(hjust = .5))
 
 smoke <- plot_data |> 
@@ -206,7 +200,7 @@ uninsured <- plot_data |>
   labs(title = "Uninsured rate", fill = "percent") +
   theme(plot.title = element_text(hjust = .5))
 
-plot_grid(positive, testing_rate, smoke,
+plot_grid(positive, smoke, testing_rate,
           obesity, air_pol, uninsured)
 ```
 
