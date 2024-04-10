@@ -1,8 +1,7 @@
 ---
-title: "Accounting for under reporting in Covid-19 case reporting"
-subtitle: "Using a Hiearchical framework"
-author: " "
-date: today
+title: "Comparison of models for under reporting in Covid-19 and TB case reporting"
+subtitle: "By State"
+date: 4/11/2024
 date-format: long
 footer: "Nathen Byford"
 format: baylor-revealjs
@@ -22,6 +21,8 @@ library(gstat)
 library(plotly)
 
 load("covid.RData")
+tb <- read_delim("TB_data.txt", "\t")
+tb <- select(tb, -1)
 ```
 
 ```{r}
@@ -45,13 +46,25 @@ map_counts <- left_join(US, pos_count)
 Covid-19 count data is likely under reported due to many reasons:
 
 - It can manifest in different severity levels,
+- Diagnostic challenges,
+- Stigma or social implications,
 - Some people are apprehensive to get tested,
-- Some places don't have the ability to test everyone, and
 - etc.
+
 
 :::{.def} 
 Under reported data can bias the estimates to be lower than they really are, can be thought of as unintentional missing data.
 :::
+
+## TB count data
+
+TB as a more serious disease may not be as under reported and might not benefit from using an under reported model.
+
+It is reasonable to assume there is low under reporting of TB in the US;
+
+- Nationwide healthcare system,
+- Robust disease surveillance infrastructure, and
+- Test maturity
 
 ## Data{.smaller}
 
@@ -144,7 +157,7 @@ plot_data <- data |>
     Smoking, AirPol, Obesity, Uninsured
   ) |> 
   mutate(
-    test_rate = (totalTestResults / Pop) * 100,
+    test_rate = (totalTestResults / Pop),
     positive_perc = positive / totalTestResults,
     State = str_to_lower(State)
   ) |> 
@@ -206,16 +219,14 @@ plot_grid(positive, smoke, testing_rate,
 
 ## Methods
 
-- Non-spatial model
-- Spatial models
-    - Kriging
-    - Something else
+- Non-spatial naive model
+- Spatial model
 - Under reported spatial hierarchical model
 
 Model comparison methods
 
-- Deviance information criterion (DIC)
-- Watanabe-Akaike information criterion (WAIC)
+- Deviance information criterion (DIC), and
+- Watanabe-Akaike information criterion (WAIC).
 
 ## Non-spatial model (Naive)
 - Regression model ignoring spatial component
@@ -237,12 +248,18 @@ data |>
 
 
 
-## Spatial model (Kriging)
+## Spatial model
 
+- Poisson regression
+- Using a log link on the Poisson mean[^1]
+
+[^1]: Also called a Poisson-logistic or Pogit regression model
 
 ## Under reporting hiearchical model
 
-- Idea comes from paper for correcting under reported TB counts in brazil [@stoner_hierarchical_2019]
+- Idea comes from paper for correcting under reported TB counts in Brazil [@stoner_hierarchical_2019]
+- Extension of Poisson-logistic regression model
+  - Adds an under reporting component
 
 
 ## Hiearchical model
