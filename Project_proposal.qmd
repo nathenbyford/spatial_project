@@ -1,12 +1,11 @@
 ---
-title: "Comparison of models for under reporting in Covid-19 and TB case reporting"
-subtitle: "By State"
+title: "Comparison of models for under reporting in Covid-19 and lung cancer cases"
+subtitle: "In the US by State"
 date: 4/11/2024
 date-format: long
 footer: "Nathen Byford"
 format: baylor-revealjs
 bibliography: research.bib
-view-distance: 5
 ---
 
 ```{r}
@@ -21,8 +20,6 @@ library(gstat)
 library(plotly)
 
 load("covid.RData")
-tb <- read_delim("TB_data.txt", "\t")
-tb <- select(tb, -1)
 ```
 
 ```{r}
@@ -41,6 +38,15 @@ pos_count <- dat |> select(State, positive, Pop) |> rename(region = State)
 map_counts <- left_join(US, pos_count)
 ```
 
+## Project Overview
+
+- Compare how models perform on potentially under reported data.
+  - Under reported data is when the observed value is not the true value due to some form of measurement error.
+- Under reported data can bias analyses and affect the following decisions.
+- Project will compare 3 models on two responses, Covid-19 and lung cancer[^1] counts
+
+[^1]: Including Bronchus
+
 ## Covid Count Data
 
 Covid-19 count data is likely under reported due to many reasons:
@@ -56,17 +62,17 @@ Covid-19 count data is likely under reported due to many reasons:
 Under reported data can bias the estimates to be lower than they really are, can be thought of as unintentional missing data.
 :::
 
-## TB count data
+## lung cancer count data
 
-TB as a more serious disease may not be as under reported and might not benefit from using an under reported model.
+lung cancer as a more serious disease may not be as under reported and might not benefit from using an under reported model.
 
-It is reasonable to assume there is low under reporting of TB in the US;
+It is reasonable to assume there is low under reporting of lung cancer in the US;
 
-- Nationwide healthcare system,
+- Serious illness,
 - Robust disease surveillance infrastructure, and
-- Test maturity
+- Test maturity.
 
-## Data{.smaller}
+## Covid Data{.smaller}
 
 :::{.columns}
 ::::{.column width=58%}
@@ -115,6 +121,56 @@ Not exhaustive list of variables and summary statistics
 :::
 ::::
 :::
+
+## Lung cancer data{.smaller}
+
+- Same covariates, new response variable.
+- Nevada and Indiana did not meet USCS[^2] publication criteria
+
+:::{.columns}
+::::{.column width=59%}
+```{r}
+#| message: false
+
+cancer <- read_csv("lung-bronchus.csv")
+cancer_counts <- cancer[4:52, ] |> 
+  janitor::clean_names() |> 
+  select(area, cancer_type, case_count) |> 
+  rename(
+    region = area,
+    disease = cancer_type,
+    count = case_count
+  ) |> 
+  mutate(
+    count = as.numeric(count),
+    region = str_to_lower(region))
+
+map_counts_lung <- left_join(US, cancer_counts)
+
+map_counts_lung |> 
+  ggplot(aes(x = long,  y = lat, group = group)) +
+  geom_polygon(aes(fill = count), color = "black") +
+  theme_void() +
+  scale_fill_distiller() +
+  labs(title = "Lung cancer cases", fill = "Count") +
+  theme(plot.title = element_text(hjust = .5)) +
+  coord_map()
+```
+::::
+
+::::{.column width=39%}
+```{r}
+cancer_counts |> 
+  ggplot(aes(x = count)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 18) +
+  geom_density() +
+  scale_x_continuous(labels = scales::comma) +
+  labs(title = "Distribution of lung cancer counts",
+       x = "cases")
+```
+::::
+:::
+[^2]: United States Cancer Statistics
 
 ## EDA
 
@@ -171,7 +227,8 @@ positive <- plot_data |>
   theme_void() +
   scale_fill_distiller() +
   labs(title = "Positive count", fill = "Count") +
-  theme(plot.title = element_text(hjust = .5))
+  theme(plot.title = element_text(hjust = .5)) +
+  coord_map()
 
 testing_rate <- plot_data |> 
   ggplot(aes(x = long,  y = lat, group = group)) +
@@ -179,7 +236,8 @@ testing_rate <- plot_data |>
   theme_void() +
   scale_fill_distiller(palette = 2, labels = scales::comma) +
   labs(title = "Tests per 100k", fill = "count") +
-  theme(plot.title = element_text(hjust = .5))
+  theme(plot.title = element_text(hjust = .5)) +
+  coord_map()
 
 smoke <- plot_data |> 
   ggplot(aes(x = long,  y = lat, group = group)) +
@@ -187,7 +245,8 @@ smoke <- plot_data |>
   theme_void() +
   scale_fill_distiller(palette = 3) +
   labs(title = "Smoking rate", fill = "percent") +
-  theme(plot.title = element_text(hjust = .5))
+  theme(plot.title = element_text(hjust = .5)) +
+  coord_map()
 
 obesity <- plot_data |> 
   ggplot(aes(x = long,  y = lat, group = group)) +
@@ -195,7 +254,8 @@ obesity <- plot_data |>
   theme_void() +
   scale_fill_distiller(palette = 7) +
   labs(title = "Obesity rate", fill = "percent") +
-  theme(plot.title = element_text(hjust = .5))
+  theme(plot.title = element_text(hjust = .5)) +
+  coord_map()
 
 air_pol <- plot_data |> 
   ggplot(aes(x = long,  y = lat, group = group)) +
@@ -203,7 +263,8 @@ air_pol <- plot_data |>
   theme_void() +
   scale_fill_distiller(palette = 8) +
   labs(title = "Air polution index", fill = "value") +
-  theme(plot.title = element_text(hjust = .5))
+  theme(plot.title = element_text(hjust = .5)) +
+  coord_map()
 
 uninsured <- plot_data |> 
   ggplot(aes(x = long,  y = lat, group = group)) +
@@ -211,7 +272,8 @@ uninsured <- plot_data |>
   theme_void() +
   scale_fill_distiller(palette = "Spectral") +
   labs(title = "Uninsured rate", fill = "percent") +
-  theme(plot.title = element_text(hjust = .5))
+  theme(plot.title = element_text(hjust = .5)) +
+  coord_map()
 
 plot_grid(positive, smoke, testing_rate,
           obesity, air_pol, uninsured)
@@ -251,15 +313,18 @@ data |>
 ## Spatial model
 
 - Poisson regression
-- Using a log link on the Poisson mean[^1]
+  - Using a log link on the Poisson mean[^3]
+  - Can compare frequentest and Bayesian model
+- Poisson Kriging
 
-[^1]: Also called a Poisson-logistic or Pogit regression model
+[^3]: Also called a Poisson-logistic or Pogit regression model
 
 ## Under reporting hiearchical model
 
-- Idea comes from paper for correcting under reported TB counts in Brazil [@stoner_hierarchical_2019]
+- Idea comes from paper for correcting under reported lung cancer counts in Brazil [@stoner_hierarchical_2019]
 - Extension of Poisson-logistic regression model
   - Adds an under reporting component
+- Have code for model from paper as a starting point 
 
 
 ## Hiearchical model
@@ -276,5 +341,7 @@ z_{s} | y_{s} \sim \text{Binomial}(\pi_s, &y_{s}) \\
 \end{align*}
 where $\pi_s$ uses a logit link function and $\lambda_s$ uses a log link function to determine values for the parameters.
 :::
+
+# Thank You!
 
 ## References
