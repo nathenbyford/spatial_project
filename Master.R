@@ -42,12 +42,13 @@ vp=viridis_pal()(20) # Colour pallette for plots.
 seed <- 794637 # Seed for R and NIMBLE, 794637 is used for results in the article.
 
 load("covid.RData") # Load in the data. STILL NEED TO CHANGE THIS
+load("spatial.Rdata")
 
 # Simulate some data.
-source('Simulation.R')
+# source('Simulation.R')
 
 # Run the sensitivity analysis.
-source('Experiments.R')
+# source('Experiments.R')
 
 # Run the tuberculosis analysis.
-source('Tuberculosis.R')
+source('Paper_code.R')

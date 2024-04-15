@@ -1,0 +1,32 @@
+model {
+  for (i in 1:n) {
+    mu_pi[i] <- b[1] + gamma[i]
+    pi[i] <- ilogit(mu_pi[i])
+
+    lambda[i] <- exp(log(pop[i]) + a[1] + unem[i,1]*a[2] + unem[i,2]*a[3] +
+                       den[i,1]*a[4] + den[i,2]*a[5] + phi[index[i]] + theta[index[i]])
+
+    z[i] ~ dpois(pi[i]*lambda[i])
+    gamma[i] ~ dnorm(0, 1/epsilon^2)
+  }
+
+  for (j in 1:R) {
+    theta[j] ~ dnorm(0, 1/sigma^2)
+  }
+
+  for (j in 1:R) {
+    phi[j] ~ car.normal(adj[1:l_adj], num[1:R], tau)
+  }
+
+  a[1] ~ dnorm(-8, 1)
+  for (i in 2:6) {
+    a[i] ~ dnorm(0, 10)
+  }
+  
+  b[1] ~ dnorm(2, 0.6)
+  
+  sigma ~ dgamma(0.5, 0.0005)  # precision parameter for theta
+  epsilon ~ dgamma(0.5, 0.0005) # precision parameter for gamma
+  nu ~ dgamma(0.5, 0.0005)      # precision parameter for phi
+  tau <- 1/nu^2
+}
