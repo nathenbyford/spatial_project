@@ -134,6 +134,8 @@ chain_4 <- as.data.frame(Covid_samples$chain4) %>% as_tibble() %>% mutate(chain 
 
 samps <- bind_rows(chain_1, chain_2, chain_3, chain_4)
 
+# save(samps, file = "samples.csv")
+
 # Check chains for convergence.
 plot(Covid_samples[,c('a[1]','a[2]','a[3]','a[4]','a[5]',
                    'epsilon','sigma','tau')])
