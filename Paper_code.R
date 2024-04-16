@@ -16,12 +16,12 @@ weights=rep(1,l_adj)
 Covid_N=length(dat$positive) # Number of observations.
 n_regions=length(n_adj) # Number of regions.
 
-total_obs=c(sum(TBdata$TB[1:n_regions]),sum(TBdata$TB[(1:n_regions)+n_regions]),sum(TBdata$TB[(1:n_regions)+2*n_regions]))
+# total_obs=c(sum(TBdata$TB[1:n_regions]),sum(TBdata$TB[(1:n_regions)+n_regions]),sum(TBdata$TB[(1:n_regions)+2*n_regions]))
 
 # Set up index for spatial parameters rho and delta.
 region_index=numeric(n_regions)
 for(i in 1:n_regions){
-  region_index[i]=which(States$NAME_1==dat$NAME_1[i])
+  region_index[i]=which(States$NAME_1==dat$State[i])
 }
 region_index=rep(region_index,3)
 
@@ -112,8 +112,9 @@ Covid_model <- nimbleModel(Covid_code, Covid_constants, Covid_data, Covid_inits)
 Covid_compiled_model <- compileNimble(Covid_model,resetFunctions = TRUE)
 
 # Set up samplers.
-Covid_mcmc_conf <- configureMCMC(TB_model,monitors=c('a','sigma','tau','epsilon',
-                                                  'pi','lambda','phi','theta'),useConjugacy = TRUE)
+Covid_mcmc_conf <- configureMCMC(Covid_model,monitors=c('a','sigma','tau','epsilon',
+                                                  'pi','lambda','phi','theta'),
+                                 useConjugacy = TRUE, enableWAIC = TRUE)
 Covid_mcmc_conf$removeSamplers(c('a[1]','sigma','nu','epsilon'))
 Covid_mcmc_conf$addSampler(target=c('a[1]','epsilon'),type='AF_slice')
 Covid_mcmc_conf$addSampler(target=c('sigma','nu'),type='AF_slice')
@@ -122,15 +123,22 @@ Covid_mcmc<-buildMCMC(Covid_mcmc_conf)
 Covid_compiled_mcmc<-compileNimble(Covid_mcmc, project = Covid_model, resetFunctions = TRUE)
 
 # Run the model (a few hours).
-Covid_samples=runMCMC(Covid_compiled_mcmc, inits = Covid_inits,
+Covid_samples <- runMCMC(Covid_compiled_mcmc, inits = Covid_inits,
                    nchains = 4, nburnin=400000,niter = 800000,samplesAsCodaMCMC = TRUE,thin=40,
-                   summary = FALSE, WAIC = FALSE,setSeed=c(seed,2*seed,3*seed,4*seed)) 
+                   summary = FALSE, WAIC = TRUE, setSeed=c(seed,2*seed,3*seed,4*seed)) 
+
+chain_1 <- as.data.frame(Covid_samples$chain1) %>% as_tibble() %>% mutate(chain = 1)
+chain_2 <- as.data.frame(Covid_samples$chain2) %>% as_tibble() %>% mutate(chain = 2)
+chain_3 <- as.data.frame(Covid_samples$chain3) %>% as_tibble() %>% mutate(chain = 3)
+chain_4 <- as.data.frame(Covid_samples$chain4) %>% as_tibble() %>% mutate(chain = 4)
+
+samps <- bind_rows(chain_1, chain_2, chain_3, chain_4)
 
 # Check chains for convergence.
-plot(TB_samples[,c('a[1]','a[2]','a[3]','a[4]','a[5]','a[6]','a[7]','a[8]',
-                   'b[1]','b[2]','b[3]','b[4]','epsilon','sigma','tau')])
-gelman.diag(TB_samples[,c('a[1]','a[2]','a[3]','a[4]','a[5]','a[6]','a[7]','a[8]',
-                          'b[1]','b[2]','b[3]','b[4]','epsilon','sigma','tau')])
+plot(Covid_samples[,c('a[1]','a[2]','a[3]','a[4]','a[5]',
+                   'epsilon','sigma','tau')])
+gelman.diag(TB_samples[,c('a[1]','a[2]','a[3]','a[4]','a[5]',
+                          'epsilon','sigma','tau')])
 
 
 # Part Three: Model Checking
