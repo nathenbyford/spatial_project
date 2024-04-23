@@ -1,9 +1,23 @@
 #########################################
 ##   Correcting for Under-Reporting    ##
-##         Tuberculosis Model          ##
+##         Covid Model                 ##
 #########################################
 
-set.seed(seed) # Set the seed (found in the Master script).
+library(tidyverse) # For reproducing plots seen in the paper.
+library(nimble) # For MCMC computation using NIMBLE.
+library(coda) # For manipulation of MCMC results.
+library(mgcv)
+library(ngspatial)
+library(sp) # For plotting the micro-regions.
+library(spdep) # For computing the neighbourhood and adjancency objects.
+library(maps) # For adding a map to the plots of Brazil.
+library(viridis)
+library(mapproj)
+
+set.seed(794637) # Set the seed (found in the Master script).
+
+load("covid.RData") # Load in the data. STILL NEED TO CHANGE THIS
+load("spatial.Rdata")
 
 # Part One: Setup
 
@@ -16,14 +30,12 @@ weights=rep(1,l_adj)
 Covid_N=length(dat$positive) # Number of observations.
 n_regions=length(n_adj) # Number of regions.
 
-# total_obs=c(sum(TBdata$TB[1:n_regions]),sum(TBdata$TB[(1:n_regions)+n_regions]),sum(TBdata$TB[(1:n_regions)+2*n_regions]))
 
 # Set up index for spatial parameters rho and delta.
 region_index=numeric(n_regions)
 for(i in 1:n_regions){
   region_index[i]=which(States$NAME_1==dat$State[i])
 }
-region_index=rep(region_index,3)
 
 
 # Create polynomials.
@@ -37,14 +49,24 @@ poly_den=poly(dat$Popdensity,2)
 
 
 # Produce a map of the tuberculosis cases.
-states_map=map_data(States)
-states_map$region=as.numeric(states_map$region)
-states_map$region[states_map$region<=187]=states_map$region[states_map$region<=187]+1 
-states_map$incidence=300000*(States$Covid.2020/States$Population)[states_map$region]
+states_map <- map_data("state")
+
+map_data <- dat |> 
+  select(
+    State, positive, Pop
+  ) |> 
+  rename("region" = State, "population" = Pop) |> 
+  mutate(
+    incidence = 100000 * (positive / population),
+    region = str_to_lower(region)
+  )
+
+states_map <- left_join(states_map, map_data, by = "region")
+
 
 ggplot() + geom_polygon(data = states_map, aes(x=long, y = lat, group = group,fill=incidence))+ggtitle('New Covid-19 Cases 2020') +
   theme_void() +
-  scale_fill_viridis(trans = "log", breaks = c(150, 400, 1000, 3000), name="Number of Cases", guide = guide_legend( keyheight = unit(3, units = "mm"), keywidth=unit(12, units = "mm"), label.position = "bottom", title.position = 'top', nrow=1) ) +
+  scale_fill_viridis(trans = "log", breaks = c(50, 150, 500, 1000, 1500), name="Number of Cases", guide = guide_legend( keyheight = unit(3, units = "mm"), keywidth=unit(12, units = "mm"), label.position = "bottom", title.position = 'top', nrow=1) ) +
   labs(
     title = "Recorded Covid-19 Cases",
     subtitle = "Total per 100,000 People, 2020"
@@ -62,7 +84,7 @@ ggplot() + geom_polygon(data = states_map, aes(x=long, y = lat, group = group,fi
     legend.position = c(0.2, 0.1)
   ) +
   coord_map()
-ggsave('data.pdf',device='pdf',width=6,height=6)
+ggsave('data.png',device='png',width=6,height=6)
 
 # Part Two: Execution
 
@@ -124,7 +146,7 @@ Covid_compiled_mcmc<-compileNimble(Covid_mcmc, project = Covid_model, resetFunct
 
 # Run the model (a few hours).
 Covid_samples <- runMCMC(Covid_compiled_mcmc, inits = Covid_inits,
-                   nchains = 4, nburnin=400000,niter = 800000,samplesAsCodaMCMC = TRUE,thin=40,
+                   nchains = 4, nburnin=2000,niter = 4000,samplesAsCodaMCMC = TRUE,thin=40,
                    summary = FALSE, WAIC = TRUE, setSeed=c(seed,2*seed,3*seed,4*seed)) 
 
 chain_1 <- as.data.frame(Covid_samples$chain1) %>% as_tibble() %>% mutate(chain = 1)
