@@ -35,7 +35,7 @@ library(viridis)
 library(mapproj)
 
 # Load in some functions.
-source('Functions.R')
+# source('Functions.R')
 
 vp=viridis_pal()(20) # Colour pallette for plots.
 
